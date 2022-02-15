@@ -1,0 +1,16 @@
+README.md
+setup.py
+Zexture.egg-info/PKG-INFO
+Zexture.egg-info/SOURCES.txt
+Zexture.egg-info/dependency_links.txt
+Zexture.egg-info/requires.txt
+Zexture.egg-info/top_level.txt
+zexture/GestureMath.py
+zexture/HandTrackingModule.py
+zexture/Zexture.py
+zexture/__init__.py
+zexture.egg-info/PKG-INFO
+zexture.egg-info/SOURCES.txt
+zexture.egg-info/dependency_links.txt
+zexture.egg-info/requires.txt
+zexture.egg-info/top_level.txt

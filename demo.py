@@ -1,5 +1,5 @@
 # import the Static Gesture Module 
-import modules.Zexture as sg
+import zexture.Zexture as sg
 
 def main():
     # - Create an object that will be used to perform all the functionalities

@@ -1,0 +1,5 @@
+opencv-contrib-python==4.5.5.62
+mediapipe==0.8.9.1
+numpy==1.22.2
+pandas==1.4.1
+sklearn==0.0

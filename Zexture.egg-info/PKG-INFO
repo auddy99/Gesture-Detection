@@ -1,0 +1,11 @@
+Metadata-Version: 1.0
+Name: zexture
+Version: 0.1
+Summary: Zexture: gesture recognition module
+Home-page: UNKNOWN
+Author: auddy99, singh2010nidhi, mayankraj
+Author-email: UNKNOWN
+License: UNKNOWN
+Description: Jesture is openCV based hand gesture detection module.
+                    It uses the mediapipe library to detect hands by returning a set of 21 landmarks for each camera frame which contains a hand.
+Platform: UNKNOWN
