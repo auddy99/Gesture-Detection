@@ -22,7 +22,7 @@ def main():
     
     # User Inputs (Frames taken is columnLimit * rowCount)
     columnLimit = 20
-    targetLabel = "Thumbs_Down"
+    targetLabel = "Victory"
     rowCount = 50
     selectedHandPoints = [0,4,8,20]
     # ----------------------
@@ -34,11 +34,14 @@ def main():
         for j in selectedHandPoints:
             column_names.append("dist_"+str(j)+"_"+str(i))
             column_names.append("angle_"+str(j)+"_"+str(i))
+            column_names.append("distC_"+str(j)+"_"+str(i))
+            column_names.append("angleC_"+str(j)+"_"+str(i))
     data = [[0.0 for j in range(len(column_names))] for i in range(rowCount)]
     df = pd.DataFrame(data, columns=column_names)
     columnCounter = 0
     rowCounter = 0
     handPointCount = len(selectedHandPoints)
+    prevlmlist = [[0,0,0] for i in range(21)]
 
     while countLabel < rowCount * columnLimit:
 
@@ -56,15 +59,24 @@ def main():
             boxLength = terminal[0] - origin[0]
             boxHeight = terminal[1] - origin[1]
             boxDiagonal = sqrt(boxLength*boxLength + boxHeight*boxHeight)
+            center = ((int)(origin[0]+boxLength/2), (int)(origin[1]+boxHeight/2))
+
             cv2.rectangle(img, origin, terminal, color=(0,0,255), thickness=2)
             cv2.circle(img, origin, 3, (255,0,0), cv2.FILLED)
             cv2.circle(img, terminal, 3, (255,0,0), cv2.FILLED)
+            cv2.circle(img, center, 5, (0,255,0), cv2.FILLED)
 
             df["size_ratio_"+str(columnCounter)][rowCounter] = boxLength / boxHeight
             for i in selectedHandPoints:
-                dist, angle = getVector(origin,(lmlist[i][1], lmlist[i][2]))
+                cv2.arrowedLine(img, center, (lmlist[i][1], lmlist[i][2]), (0,0,0), 2)
+                cv2.arrowedLine(img, (prevlmlist[i][1], prevlmlist[i][2]), (lmlist[i][1], lmlist[i][2]), (255,255,255), 2)
+                dist, angle = getVector(center,(lmlist[i][1], lmlist[i][2]))
+                distC, angleC = getVector((prevlmlist[i][1], prevlmlist[i][2]),(lmlist[i][1], lmlist[i][2]))
                 df["dist_"+str(i)+"_"+str(columnCounter)][rowCounter] = dist/boxDiagonal
                 df["angle_"+str(i)+"_"+str(columnCounter)][rowCounter] = angle
+                df["distC_"+str(i)+"_"+str(columnCounter)][rowCounter] = distC/boxDiagonal
+                df["angleC_"+str(i)+"_"+str(columnCounter)][rowCounter] = angleC
+            prevlmlist = lmlist
 
             columnCounter += 1
             if(columnCounter >= columnLimit):
@@ -85,7 +97,7 @@ def main():
         if keyPressed == ord(chr(27)):
             break
 
-    df.insert((columnLimit*handPointCount*2)+1,"Label", [targetLabel for i in range(rowCount)])
+    df.insert(0,"Label", [targetLabel for i in range(rowCount)])
     print(df)
     df.to_csv('trainingData\\'+targetLabel+'_train.csv')
 

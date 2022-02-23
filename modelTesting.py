@@ -20,13 +20,10 @@ def main():
     detector=htm.handDetector()
 
     result = dict()
-    result[0]='Come'
-    result[1]='Go'
-    result[2]='Hi'
-    result[3]='No'
-    result[4]='Thumbs_Down'
-    result[5]='Thumbs_Up'
-    result[6]='Turn'
+    result[0]='Doctor Strange'
+    result[1]='Hi'
+    result[2]='Stop'
+    result[3]='Victory'
     result[100] = 'None'
     columnLimit = 20
     
@@ -40,11 +37,15 @@ def main():
     counter = 0
     testList = []
     answer = 100
+    prevlmlist = [[0,0,0] for i in range(21)]
 
     while True:
-        success,img = cap.read()
-        img = detector.findhands(img)
-        lmlist = detector.findPosition(img)
+        try:
+            success,img = cap.read()
+            img = detector.findhands(img)
+            lmlist = detector.findPosition(img)
+        except:
+            continue
         
         cv2.rectangle(img, (0,0), (650, 40), (0,0,0), -1)
         cv2.rectangle(img, (130,0), (650, 38), (255,255,255), -1)
@@ -65,18 +66,29 @@ def main():
             boxLength = terminal[0] - origin[0]
             boxHeight = terminal[1] - origin[1]
             boxDiagonal = sqrt(boxLength*boxLength + boxHeight*boxHeight)
+            center = ((int)(origin[0]+boxLength/2), (int)(origin[1]+boxHeight/2))
+
             cv2.rectangle(img, origin, terminal, color=(0,0,255), thickness=2)
             cv2.circle(img, origin, 3, (255,0,0), cv2.FILLED)
             cv2.circle(img, terminal, 3, (255,0,0), cv2.FILLED)
+            cv2.circle(img, center, 5, (0,255,0), cv2.FILLED)
 
             testList.append(boxLength / boxHeight)
             for i in selectedHandPoints:
-                dist, angle = getVector(origin,(lmlist[i][1], lmlist[i][2]))
+                cv2.arrowedLine(img, center, (lmlist[i][1], lmlist[i][2]), (0,0,0), 2)
+                cv2.arrowedLine(img, (prevlmlist[i][1], prevlmlist[i][2]), (lmlist[i][1], lmlist[i][2]), (255,255,255), 2)
+
+                dist, angle = getVector(center,(lmlist[i][1], lmlist[i][2]))
+                distC, angleC = getVector((prevlmlist[i][1], prevlmlist[i][2]),(lmlist[i][1], lmlist[i][2]))
+
                 testList.append(dist/boxDiagonal)
                 testList.append(angle)
+                testList.append(distC/boxDiagonal)
+                testList.append(angleC)
 
             counter = (counter+1) % columnLimit
             cv2.putText(img, result[int(answer)], (260,30), cv2.FONT_HERSHEY_PLAIN, 2, (0,0,0), 2)
+            prevlmlist = lmlist
 
         else:
             cv2.putText(img, " (No Hands Detected)", (260,30), cv2.FONT_HERSHEY_PLAIN, 2, (0,0,0), 1)
