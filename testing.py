@@ -34,7 +34,7 @@ def main():
     csv_val=pd.read_csv('trainingData.csv')
     frame=(len(csv_val.columns)-3)//21
     # print(frame)
-    cap=cv2.VideoCapture(1)
+    cap=cv2.VideoCapture(0)
     detector=htm.handDetector()
     dist_ant=[[(sys.maxsize,sys.maxsize,sys.maxsize) for i in range(21)] for i in range(frame)]
     value_in_model=[sys.maxsize]*(21*frame)
