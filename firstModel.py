@@ -7,9 +7,9 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn import preprocessing
 import pickle
 
-df = pd.read_csv('trainingData.csv')
-df = df.iloc[: , 2:]
-
+df = pd.read_feather('trainingData.feather')
+print(df.shape)
+# df = df.iloc[: , 2:]
 label_encoder = preprocessing.LabelEncoder()
 
 y = label_encoder.fit_transform(df['Label'])

@@ -1,9 +1,10 @@
+from matplotlib.pyplot import axis
 import numpy as np
 import pandas as pd
 import glob
 
 path = r'trainingData' # use your path
-all_files = glob.glob(path + "/*.csv")
+all_files = glob.glob(path + "/*.feather")
 
 final_df = []
 selectedHandPoints = [0,4,8,20]
@@ -19,9 +20,11 @@ for i in range(frameLimit):
         column_names.append("angleC_"+str(j)+"_"+str(i))
 
 for filename in all_files:
-    df = pd.read_csv(filename, index_col=None, header=0)
+    df = pd.read_feather(filename)
     label = df['Label'][0]
-    df = df.iloc[: , 2:]
+    print(df)
+    df = df.drop('Label', axis=1)
+    print(df)
     full_row = [label]
     for index, row in df.iterrows():
         full_row = full_row + list(row)
@@ -30,4 +33,5 @@ for filename in all_files:
             full_row = [label]
 
 frame = pd.DataFrame(final_df, columns=column_names)
-frame.to_csv("trainingData.csv")
+print(frame.shape)
+frame.to_feather("trainingData.feather")

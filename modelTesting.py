@@ -25,7 +25,7 @@ def main():
     result[2]='Stop'
     result[3]='Victory'
     result[100] = 'None'
-    columnLimit = 20
+    columnLimit = 3
     
     loadedModel = pickle.load(open('RFCModel.sav','rb'))
 
