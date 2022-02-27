@@ -38,13 +38,16 @@ def main():
     testList = []
     answer = 100
     prevlmlist = [[0,0,0] for i in range(21)]
+    trail = [[] for i in range(21)]
+    showTrail = False
 
     while True:
         try:
             success,img = cap.read()
-            img = detector.findhands(img)
+            img = detector.findhands(img, draw=False)
             lmlist = detector.findPosition(img)
         except:
+            cv2.putText(img, " (Detection issue)", (260,30), cv2.FONT_HERSHEY_PLAIN, 2, (0,0,0), 1)
             continue
         
         cv2.rectangle(img, (0,0), (650, 40), (0,0,0), -1)
@@ -68,18 +71,30 @@ def main():
             boxDiagonal = sqrt(boxLength*boxLength + boxHeight*boxHeight)
             center = ((int)(origin[0]+boxLength/2), (int)(origin[1]+boxHeight/2))
 
-            cv2.rectangle(img, origin, terminal, color=(0,0,255), thickness=2)
-            cv2.circle(img, origin, 3, (255,0,0), cv2.FILLED)
-            cv2.circle(img, terminal, 3, (255,0,0), cv2.FILLED)
-            cv2.circle(img, center, 5, (0,255,0), cv2.FILLED)
+            # cv2.rectangle(img, origin, terminal, color=(0,0,255), thickness=2)
+            # cv2.circle(img, origin, 3, (255,0,0), cv2.FILLED)
+            # cv2.circle(img, terminal, 3, (255,0,0), cv2.FILLED)
+            # cv2.circle(img, center, 5, (0,255,0), cv2.FILLED)
 
             testList.append(boxLength / boxHeight)
             for i in selectedHandPoints:
-                cv2.arrowedLine(img, center, (lmlist[i][1], lmlist[i][2]), (0,0,0), 2)
-                cv2.arrowedLine(img, (prevlmlist[i][1], prevlmlist[i][2]), (lmlist[i][1], lmlist[i][2]), (255,255,255), 2)
+                targetPoint = (lmlist[i][1], lmlist[i][2])
+                prevPoint = (prevlmlist[i][1], prevlmlist[i][2])
 
-                dist, angle = getVector(center,(lmlist[i][1], lmlist[i][2]))
-                distC, angleC = getVector((prevlmlist[i][1], prevlmlist[i][2]),(lmlist[i][1], lmlist[i][2]))
+                cv2.arrowedLine(img, center, targetPoint, (0,0,0), 2)
+                colorTrail = 0
+                for j in trail[i]:
+                    if showTrail:
+                        cv2.line(img, j[0], j[1], (colorTrail,255-colorTrail,colorTrail), 2)
+                    colorTrail += 30
+                # cv2.arrowedLine(img, prevPoint, targetPoint, (0,255,0), 2)
+                trail[i].append((prevPoint, targetPoint))
+                if(len(trail[i]) > 10):
+                    trail[i].pop(0)
+                
+
+                dist, angle = getVector(center,targetPoint)
+                distC, angleC = getVector(prevPoint,targetPoint)
 
                 testList.append(dist/boxDiagonal)
                 testList.append(angle)

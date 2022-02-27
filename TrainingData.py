@@ -20,30 +20,26 @@ def main():
     countLabel = 0
     p = dict()
     
-    # User Inputs (Frames taken is columnLimit * rowCount)
-    columnLimit = 20
-    targetLabel = "Victory"
-    rowCount = 50
+    # User Inputs (Frames taken is columnLimit * sampleSpace)
+    targetLabel = "Sample"
+    sampleSpace = 50
     selectedHandPoints = [0,4,8,20]
     # ----------------------
 
-    p['index'] = [targetLabel+"_" + str(i) for i in range (rowCount)]
+    p['index'] = [targetLabel+"_" + str(i) for i in range (sampleSpace)]
     column_names = []
-    for i in range(columnLimit):
-        column_names.append("size_ratio_"+str(i))
-        for j in selectedHandPoints:
-            column_names.append("dist_"+str(j)+"_"+str(i))
-            column_names.append("angle_"+str(j)+"_"+str(i))
-            column_names.append("distC_"+str(j)+"_"+str(i))
-            column_names.append("angleC_"+str(j)+"_"+str(i))
-    data = [[0.0 for j in range(len(column_names))] for i in range(rowCount)]
+    column_names.append("size_ratio")
+    for j in selectedHandPoints:
+        column_names.append("dist_"+str(j))
+        column_names.append("angle_"+str(j))
+        column_names.append("distC_"+str(j))
+        column_names.append("angleC_"+str(j))
+    data = [[0.0 for j in range(len(column_names))] for i in range(sampleSpace)]
     df = pd.DataFrame(data, columns=column_names)
-    columnCounter = 0
-    rowCounter = 0
     handPointCount = len(selectedHandPoints)
     prevlmlist = [[0,0,0] for i in range(21)]
 
-    while countLabel < rowCount * columnLimit:
+    while countLabel < sampleSpace:
 
         success,img = cap.read()
         img = detector.findhands(img)
@@ -66,23 +62,17 @@ def main():
             cv2.circle(img, terminal, 3, (255,0,0), cv2.FILLED)
             cv2.circle(img, center, 5, (0,255,0), cv2.FILLED)
 
-            df["size_ratio_"+str(columnCounter)][rowCounter] = boxLength / boxHeight
+            df["size_ratio"][countLabel] = boxLength / boxHeight
             for i in selectedHandPoints:
                 cv2.arrowedLine(img, center, (lmlist[i][1], lmlist[i][2]), (0,0,0), 2)
                 cv2.arrowedLine(img, (prevlmlist[i][1], prevlmlist[i][2]), (lmlist[i][1], lmlist[i][2]), (255,255,255), 2)
                 dist, angle = getVector(center,(lmlist[i][1], lmlist[i][2]))
                 distC, angleC = getVector((prevlmlist[i][1], prevlmlist[i][2]),(lmlist[i][1], lmlist[i][2]))
-                df["dist_"+str(i)+"_"+str(columnCounter)][rowCounter] = dist/boxDiagonal
-                df["angle_"+str(i)+"_"+str(columnCounter)][rowCounter] = angle
-                df["distC_"+str(i)+"_"+str(columnCounter)][rowCounter] = distC/boxDiagonal
-                df["angleC_"+str(i)+"_"+str(columnCounter)][rowCounter] = angleC
+                df["dist_"+str(i)][countLabel] = dist/boxDiagonal
+                df["angle_"+str(i)][countLabel] = angle
+                df["distC_"+str(i)][countLabel] = distC/boxDiagonal
+                df["angleC_"+str(i)][countLabel] = angleC
             prevlmlist = lmlist
-
-            columnCounter += 1
-            if(columnCounter >= columnLimit):
-                columnCounter = 0
-                rowCounter += 1
-
             countLabel += 1
 
         cTime=time.time()
@@ -97,9 +87,9 @@ def main():
         if keyPressed == ord(chr(27)):
             break
 
-    df.insert(0,"Label", [targetLabel for i in range(rowCount)])
+    df.insert(0,"Label", [targetLabel for i in range(sampleSpace)])
     print(df)
-    df.to_csv('trainingData\\'+targetLabel+'_train.csv')
+    df.to_feather('trainingData\\'+targetLabel+'_train.feather')
 
 if __name__=="__main__":
     main()
