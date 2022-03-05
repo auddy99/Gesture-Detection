@@ -8,7 +8,7 @@ all_files = glob.glob(path + "/*.feather")
 
 final_df = []
 selectedHandPoints = [0,4,8,20]
-frameLimit = 3
+frameLimit = 5
 
 column_names = ["Label"]
 for i in range(frameLimit):

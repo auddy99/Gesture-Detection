@@ -22,7 +22,7 @@ def main():
     
     # User Inputs (Frames taken is columnLimit * sampleSpace)
     targetLabel = "Doctor Strange"
-    sampleSpace = 50
+    sampleSpace = 500
     selectedHandPoints = [0,4,8,20]
     # ----------------------
 

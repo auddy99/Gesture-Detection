@@ -25,7 +25,7 @@ def main():
     result[2]='Stop'
     result[3]='Victory'
     result[100] = 'None'
-    columnLimit = 3
+    columnLimit = 5
     
     loadedModel = pickle.load(open('RFCModel.sav','rb'))
 
@@ -39,7 +39,7 @@ def main():
     answer = 100
     prevlmlist = [[0,0,0] for i in range(21)]
     trail = [[] for i in range(21)]
-    showTrail = False
+    showTrail = True
 
     while True:
         try:
