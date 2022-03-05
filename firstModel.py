@@ -24,6 +24,6 @@ rfc.fit(X_train,y_train)
 predictions = rfc.predict(X_test)
 print(classification_report(y_test,predictions))
 
-rfc.fit(X,y)
+rfc.fit(X.values,y)
 
 pickle.dump(rfc, open('RFCModel.sav', 'wb'))

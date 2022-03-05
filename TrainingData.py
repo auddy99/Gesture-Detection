@@ -21,7 +21,7 @@ def main():
     p = dict()
     
     # User Inputs (Frames taken is columnLimit * sampleSpace)
-    targetLabel = "Sample_horizontal"
+    targetLabel = "Doctor Strange"
     sampleSpace = 50
     selectedHandPoints = [0,4,8,20]
     # ----------------------
