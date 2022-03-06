@@ -20,14 +20,21 @@ def getCenterOfMass(lmList):
 
     return sumX/21, sumY/21
 
-def getAngle(comX, comY, x, y):
+def getAngle(pt1, pt2):
+    comX, comY = pt1[0], pt1[1]
+    x, y = pt2[0], pt2[1]
     if x == comX:
         return 1.570796
     angle = atan((y-comY)/(x-comX))
     return angle
 
-def findDistance(x1,y1,x2,y2):
+def getDistance(pt1, pt2):
+    x1, y1 = pt1[0], pt1[1]
+    x2, y2 = pt2[0], pt2[1]
     return sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2))
+
+def getVector(pt1, pt2):
+    return getDistance(pt1, pt2), getAngle(pt1, pt2)
 
 def getVectorFromCenter(lmList):
     comX, comY = getCenterOfMass(lmList)
@@ -35,7 +42,7 @@ def getVectorFromCenter(lmList):
     angleFromCOM = [0 for i in range(21)]
 
     for i in range(21):
-        distFromCOM[i] = findDistance(comX, comY, lmList[i][1], lmList[i][2])
-        angleFromCOM[i] = getAngle(comX, comY, lmList[i][1], lmList[i][2])
+        distFromCOM[i] = getDistance((comX, comY), (lmList[i][1], lmList[i][2]))
+        angleFromCOM[i] = getAngle((comX, comY), (lmList[i][1], lmList[i][2]))
 
     return distFromCOM, angleFromCOM

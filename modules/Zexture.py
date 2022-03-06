@@ -109,32 +109,43 @@ class Zexture:
         countLabel = 0
 
         p = dict()
-        p['index'] = [targetLabel+"_" + str(i) for i in range (sampleSize)]
+        p['Label'] = [targetLabel for i in range (sampleSize)]
+        p['size_ratio'] = []
+        for i in range(21):
+            p[str(i)+'_dist'] = []
+            p[str(i)+'_angle'] = []
 
         while countLabel < sampleSize:
             success,img = cap.read()
-            img = self.detector.findhands(img)
+            img = self.detector.findhands(img, draw=False)
             lmlist = self.detector.findPosition(img)
             
             if len(lmlist) != 0:
 
-                try:
-                    distFromCOM, angleFromCOM = getVectorFromCenter(lmlist)
-                except:
-                    continue
+                x_list = [i[1] for i in lmlist]
+                y_list = [i[2] for i in lmlist]
 
-                for i in range(0,21):
+                origin = (min(x_list), min(y_list))
+                terminal = (max(x_list), max(y_list))
+                boxLength = terminal[0] - origin[0]
+                boxHeight = terminal[1] - origin[1]
+                boxDiagonal = sqrt(boxLength*boxLength + boxHeight*boxHeight)
+                center = ((int)(origin[0]+boxLength/2), (int)(origin[1]+boxHeight/2))
+
+                cv2.rectangle(img, origin, terminal, color=(0,0,255), thickness=2)
+                cv2.circle(img, origin, 3, (255,0,0), cv2.FILLED)
+                cv2.circle(img, terminal, 3, (255,0,0), cv2.FILLED)
+                cv2.circle(img, center, 5, (0,255,0), cv2.FILLED)
+
+                p['size_ratio'].append(boxLength / boxHeight)
+
+                for i in range(21):
+                    distFromCenter, angleFromCenter = getVector(center, (lmlist[i][1], lmlist[i][2]))
                     if str(i)+'_dist' in p:
-                        p[str(i)+'_dist'].append(distFromCOM[i])
-                        p[str(i)+'_angle'].append(angleFromCOM[i])
-                    else:
-                        p[str(i)+'_dist'] = [distFromCOM[i]]
-                        p[str(i)+'_angle'] = [angleFromCOM[i]]
+                        p[str(i)+'_dist'].append(distFromCenter/boxDiagonal)
+                        p[str(i)+'_angle'].append(angleFromCenter)
 
-                countLabel=countLabel+1
-                
-                #print(lmlist)
-                #print(distfromCOM)
+                countLabel = countLabel+1
 
             cTime = time.time()
             fps = 1/(cTime-pTime)
@@ -150,8 +161,6 @@ class Zexture:
 
 
         df = pd.DataFrame(p)
-        df.insert(43,"Label", [targetLabel for i in range(sampleSize)])
-
         saveLoc = self.trainLoc+'\\'+targetLabel+'_data.csv'
         df.to_csv(saveLoc)
 
@@ -189,7 +198,7 @@ class Zexture:
         Exports model by the name of `self.modelName`
         """
         df = pd.read_csv(self.dataLoc+'\\'+"staticData"+".csv")
-        df = df.iloc[: , 3:]
+        df = df.iloc[: , 2:]
 
         label_encoder = preprocessing.LabelEncoder()
         df['Label'] = label_encoder.fit_transform(df['Label'])
@@ -238,15 +247,32 @@ class Zexture:
             Shows the hand skeleton while viewing
         """
         
-        img = self.detector.findhands(img, draw=show)
+        img = self.detector.findhands(img, draw=False)
         lmlist = self.detector.findPosition(img)
 
         if len(lmlist) != 0:
-            distFromCOM, angleFromCOM = getVectorFromCenter(lmlist)
-            testList = []
+
+            x_list = [i[1] for i in lmlist]
+            y_list = [i[2] for i in lmlist]
+
+            origin = (min(x_list), min(y_list))
+            terminal = (max(x_list), max(y_list))
+            boxLength = terminal[0] - origin[0]
+            boxHeight = terminal[1] - origin[1]
+            boxDiagonal = sqrt(boxLength*boxLength + boxHeight*boxHeight)
+            center = ((int)(origin[0]+boxLength/2), (int)(origin[1]+boxHeight/2))
+
+            cv2.rectangle(img, origin, terminal, color=(0,0,255), thickness=2)
+            cv2.circle(img, origin, 3, (255,0,0), cv2.FILLED)
+            cv2.circle(img, terminal, 3, (255,0,0), cv2.FILLED)
+            cv2.circle(img, center, 5, (0,255,0), cv2.FILLED)
+
+            testList = [boxLength / boxHeight]
             for i in range(21):
-                testList.append(distFromCOM[i])
-                testList.append(angleFromCOM[i])
+                distFromCenter, angleFromCenter = getVector(center, (lmlist[i][1], lmlist[i][2]))
+
+                testList.append(distFromCenter)
+                testList.append(angleFromCenter)
             
             answer = self.model.predict([testList])
             result = self.gestures[int(answer)]
