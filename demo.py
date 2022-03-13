@@ -23,7 +23,8 @@ def main():
     # gesture.addTrain("six", sampleSize=100)
 
     # - Test the trained model in real-time camera
-    gesture.staticTest()
+    gesture.dynamicTrain("Hi", 50)
+    # gesture.staticTest()
 
     # PRESS ESCAPE KEY IN ORDER TO CLOSE THE CAMERA
 

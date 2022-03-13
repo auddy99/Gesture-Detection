@@ -91,7 +91,7 @@ class Zexture:
             if keyPressed == ord(chr(27)):
                 break
 
-    def staticTrain(self, targetLabel, sampleSize=500):
+    def dynamicTrain(self, targetLabel, sampleSize=500):
         """
         Train data with your own gestures
 
@@ -109,19 +109,24 @@ class Zexture:
         cap = cv2.VideoCapture(self.cam)
         countLabel = 0
 
-        p = dict()
-        p['Label'] = [targetLabel for i in range (sampleSize)]
-        p['size_ratio'] = []
-        for i in range(21):
-            p[str(i)+'_dist'] = []
-            p[str(i)+'_angle'] = []
+        column_names = []
+        column_names.append("size_ratio")
+        for j in range(21):
+            column_names.append("dist_"+str(j))
+            column_names.append("angle_"+str(j))
+            column_names.append("distC_"+str(j))
+            column_names.append("angleC_"+str(j))
+        data = [[0.0 for j in range(85)] for i in range(sampleSize)]
+        df = pd.DataFrame(data, columns=column_names)
+        prevlmlist = [[0,0,0] for i in range(21)]
 
         while countLabel < sampleSize:
+
             success,img = cap.read()
-            img = self.detector.findhands(img, draw=False)
+            img = self.detector.findhands(img)
             lmlist = self.detector.findPosition(img)
-            
-            if len(lmlist) != 0:
+
+            if len(lmlist):
 
                 x_list = [i[1] for i in lmlist]
                 y_list = [i[2] for i in lmlist]
@@ -138,30 +143,33 @@ class Zexture:
                 cv2.circle(img, terminal, 3, (255,0,0), cv2.FILLED)
                 cv2.circle(img, center, 5, (0,255,0), cv2.FILLED)
 
-                p['size_ratio'].append(boxLength / boxHeight)
-
+                df["size_ratio"][countLabel] = boxLength / boxHeight
                 for i in range(21):
-                    distFromCenter, angleFromCenter = getVector(center, (lmlist[i][1], lmlist[i][2]))
-                    if str(i)+'_dist' in p:
-                        p[str(i)+'_dist'].append(distFromCenter/boxDiagonal)
-                        p[str(i)+'_angle'].append(angleFromCenter)
+                    cv2.arrowedLine(img, center, (lmlist[i][1], lmlist[i][2]), (0,0,0), 2)
+                    cv2.arrowedLine(img, (prevlmlist[i][1], prevlmlist[i][2]), (lmlist[i][1], lmlist[i][2]), (255,255,255), 2)
+                    dist, angle = getVector(center,(lmlist[i][1], lmlist[i][2]))
+                    distC, angleC = getVector((prevlmlist[i][1], prevlmlist[i][2]),(lmlist[i][1], lmlist[i][2]))
+                    df["dist_"+str(i)][countLabel] = dist/boxDiagonal
+                    df["angle_"+str(i)][countLabel] = angle
+                    df["distC_"+str(i)][countLabel] = distC/boxDiagonal
+                    df["angleC_"+str(i)][countLabel] = angleC
+                prevlmlist = lmlist
+                countLabel += 1
 
-                countLabel = countLabel+1
-
-            cTime = time.time()
-            fps = 1/(cTime-pTime)
-            pTime = cTime
+            cTime=time.time()
+            fps=1/(cTime-pTime)
+            pTime=cTime
 
             cv2.putText(img, "FPS:"+str(int(fps)), (10,30), cv2.FONT_HERSHEY_PLAIN, 2, getFpsColor(fps), 2)
             cv2.putText(img, "Frames taken: "+str(countLabel), (310,30), cv2.FONT_HERSHEY_PLAIN, 2, (150,0,0), 2)
             cv2.imshow('image1',img)
-            
+
             keyPressed = cv2.waitKey(5)
             if keyPressed == ord(chr(27)):
                 break
 
-
-        df = pd.DataFrame(p)
+        df.insert(0,"Label", [targetLabel for i in range(sampleSize)])
+        # print(df)
         saveLoc = self.trainLoc+'\\'+targetLabel+'_data.csv'
         df.to_csv(saveLoc)
 
