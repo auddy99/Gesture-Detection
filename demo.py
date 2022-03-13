@@ -23,14 +23,6 @@ def main():
     # gesture.addTrain("six", sampleSize=100)
 
     # - Test the trained model in real-time camera
-    # gesture.staticTrain("One", 100)
-    # gesture.staticTrain("Two", 100)
-    # gesture.staticTrain("Three", 100)
-    # gesture.staticTrain("Four", 100)
-    # gesture.staticTrain("Five", 100)
-    # gesture.staticTrain("Six", 100)
-    # gesture.joinTrainingSets()
-    # gesture.modelRFC()
     gesture.staticTest()
 
     # PRESS ESCAPE KEY IN ORDER TO CLOSE THE CAMERA
