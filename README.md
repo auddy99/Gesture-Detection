@@ -71,7 +71,7 @@ If it doesn't work, go to [Troubleshooting](#working-of-project) section.
 
 All types of posible tweaks can be seen by hovering over `StaticGesture()` method or by going to the `modules/StaticGesture.py`
 
-![Project Image](<a href="https://ibb.co/r3kBVQ7"><img src="https://i.ibb.co/r3kBVQ7/demo-py-harry-potter-Visual-Studio-Code-3-15-2022-2-22-52-AM.png" alt="demo-py-harry-potter-Visual-Studio-Code-3-15-2022-2-22-52-AM" border="0"></a>)
+![Project Image](<a href="https://ibb.co/r3kBVQ7"><img src="https://i.ibb.co/G97Zqdx/demo-py-harry-potter-Visual-Studio-Code-3-15-2022-2-22-52-AM.png" alt="demo-py-harry-potter-Visual-Studio-Code-3-15-2022-2-22-52-AM" border="0"></a>)
 
 ### Lets make some training data 
 
