@@ -71,7 +71,7 @@ If it doesn't work, go to [Troubleshooting](#working-of-project) section.
 
 All types of posible tweaks can be seen by hovering over `StaticGesture()` method or by going to the `modules/StaticGesture.py`
 
-![Project Image](https://i.imgur.com/a/LKlT1BO.png)
+![Project Image](https://i.imgur.com/Vd1rwA7.png)
 
 ### Lets make some training data 
 
