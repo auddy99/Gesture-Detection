@@ -55,6 +55,12 @@ class Zexture:
         self.trainName = trainName
         self.modelName = modelName
 
+        # Testing Variables
+        self.counter = 0
+        self.frameLimit = 5
+        self.testList = []
+        self.answer = -1
+
         try:
             with open(self.dataLoc + "\\gestures.json", 'r') as f:
                 data = json.load(f)
@@ -173,7 +179,7 @@ class Zexture:
         saveLoc = self.trainLoc+'\\'+targetLabel+'_data.csv'
         df.to_csv(saveLoc)
 
-    def joinTrainingSets(self, selectedHandPoints = [0,4], frameLimit = 5):
+    def joinTrainingSets(self, selectedHandPoints = [0,4,8,12,16,20], frameLimit = 5):
         """
         Combine all training data to one file
 
@@ -181,6 +187,8 @@ class Zexture:
         """
 
         all_files = glob.glob(self.trainLoc + "/*_data.csv")
+        self.frameLimit = frameLimit
+        # JSON update
         
         jsonData = {}
         final_df = []
@@ -196,7 +204,7 @@ class Zexture:
             filter_cols.append(str(i)+"_angleC")
         
         req_cols = ['Label']
-        for i in range(frameLimit):
+        for i in range(self.frameLimit):
             req_cols.append(str(i)+"_Size_Ratio")
             for j in selectedHandPoints:
                 req_cols.append(str(j)+"_"+str(i)+'_dist')
@@ -221,6 +229,7 @@ class Zexture:
         self.gestures = jsonData['gestures']
         with open(self.dataLoc + "\\gestures.json", 'w') as f:
             jsonData["selectedHandPoints"] = selectedHandPoints
+            jsonData["frameLimit"] = frameLimit
             json.dump(jsonData, f)
         self.gestureCount = len(final_df)
 
@@ -251,12 +260,11 @@ class Zexture:
 
         predictions = rfc.predict(X_test)
         print(classification_report(y_test,predictions))
-        print(y.value_counts())
-        rfc.fit(X.values,y.values)
+        rfc.fit(X.values, y.values)
         self.model = rfc
         pickle.dump(rfc, open(self.dataLoc + "\\" + self.modelName +'.sav', 'wb'))
 
-    def addTrain(self, targetLabel, sampleSize = 500):
+    def addTrain(self, targetLabel, sampleSize = 500, frameLimit = 5):
         """
         Combine `dynamicTrain()`, `joinTrainingSets()`, `modelRFC()` into single method
 
@@ -270,10 +278,10 @@ class Zexture:
             - `Warning`: Using different sampleSize for different training data might cause mismatch and lead to unexpected results
         """
         self.dynamicTrain(targetLabel, sampleSize)
-        self.joinTrainingSets()
+        self.joinTrainingSets(frameLimit=frameLimit)
         self.modelRFC()
 
-    def testImage(self, img, show, selectedHandPoints):
+    def testImage(self, img, show, selectedHandPoints, resultList, prevlmlist):
         """
         Test a single image frame and return result
 
@@ -288,7 +296,12 @@ class Zexture:
         img = self.detector.findhands(img, draw=True)
         lmlist = self.detector.findPosition(img)
 
-        if len(lmlist) != 0:
+        if self.counter % self.frameLimit == 0 and len(self.testList) != 0:
+            self.answer = self.model.predict([self.testList])
+            self.testList = []
+            self.counter = 0
+
+        if len(lmlist):
 
             x_list = [i[1] for i in lmlist]
             y_list = [i[2] for i in lmlist]
@@ -305,19 +318,38 @@ class Zexture:
             # cv2.circle(img, terminal, 3, (255,0,0), cv2.FILLED)
             # cv2.circle(img, center, 5, (0,255,0), cv2.FILLED)
 
-            testList = [boxLength / boxHeight]
-            for i in range(21):
-                if(i not in selectedHandPoints):
-                    continue
-                distFromCenter, angleFromCenter = getVector(center, (lmlist[i][1], lmlist[i][2]))
-                testList.append(distFromCenter/boxDiagonal)
-                testList.append(angleFromCenter)
-            
-            answer = self.model.predict([testList])
-            result = self.gestures[int(answer)]
-            return result
+            self.testList.append(boxLength / boxHeight)
+            for i in selectedHandPoints:
+                targetPoint = (lmlist[i][1], lmlist[i][2])
+                prevPoint = (prevlmlist[i][1], prevlmlist[i][2])
+
+                # cv2.arrowedLine(img, center, targetPoint, (0,0,0), 2)
+                # colorTrail = 0
+                # for j in trail[i]:
+                #     if showTrail:
+                #         cv2.line(img, j[0], j[1], (colorTrail,255-colorTrail,colorTrail), 2)
+                #     colorTrail += 30
+                # # cv2.arrowedLine(img, prevPoint, targetPoint, (0,255,0), 2)
+                # trail[i].append((prevPoint, targetPoint))
+                # if(len(trail[i]) > 10):
+                #     trail[i].pop(0)
+                
+
+                dist, angle = getVector(center,targetPoint)
+                distC, angleC = getVector(prevPoint,targetPoint)
+                self.testList.append(dist/boxDiagonal)
+                self.testList.append(angle)
+                self.testList.append(distC/boxDiagonal)
+                self.testList.append(angleC)
+            self.counter += 1
+            prevlmlist = lmlist
+            if self.answer == -1:
+                return "None"
+            return resultList[int(self.answer)]
+
         else:
-            return ""
+            return " (No Hands Detected)"
+
     
     def dynamicTest(self, show=True):
         """
@@ -333,11 +365,12 @@ class Zexture:
 
         with open(self.dataLoc + "\\gestures.json", 'r') as f:
             jsonData = json.load(f)
+
+        prevlmlist = [[0,0,0] for i in range(21)]
         
         while True:
             success,img = cap.read()
-            answer = self.testImage(img, show, jsonData['selectedHandPoints'])
-
+            result = self.testImage(img, show, jsonData['selectedHandPoints'], jsonData['gestures'], prevlmlist)
             cTime=time.time()
             fps=1/(cTime-pTime)
             pTime=cTime
@@ -347,8 +380,8 @@ class Zexture:
             cv2.putText(img, "Result:", (140,30), cv2.FONT_HERSHEY_PLAIN, 2, (0,0,0), 1)
             cv2.putText(img, "FPS:"+str(int(fps)), (10,30), cv2.FONT_HERSHEY_PLAIN, 2, getFpsColor(fps), 2)
 
-            if answer != "":
-                cv2.putText(img, answer, (260,30), cv2.FONT_HERSHEY_PLAIN, 2, (0,0,0), 2)
+            if result != "":
+                cv2.putText(img, result, (260,30), cv2.FONT_HERSHEY_PLAIN, 2, (0,0,0), 2)
             else:
                 cv2.putText(img, " (No Hands Detected)", (260,30), cv2.FONT_HERSHEY_PLAIN, 2, (0,0,0), 1)
 
@@ -356,6 +389,9 @@ class Zexture:
 
             keyPressed = cv2.waitKey(5)
             if keyPressed == ord(chr(27)):
+                self.counter = 0
+                self.testList = []
+                self.answer = -1
                 break
 
 
