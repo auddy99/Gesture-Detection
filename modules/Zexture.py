@@ -21,9 +21,9 @@ from sklearn import preprocessing
 
 class Zexture:
 
-    def __init__(self,  cam=0, dataLoc=r"modules\assets", trainLoc=r"modules\assets\staticTrainingData", trainName="staticData", modelName="RFCModel"):
+    def __init__(self,  cam=0, dataLoc=r"modules\assets", trainLoc=r"modules\assets\dynamicTrainingData", trainName="dynamicData", modelName="RFCModel"):
         """
-        Object to set up static gesture operations
+        Object to set up dynamic gesture operations
 
         Parameters
         ----------
@@ -31,22 +31,22 @@ class Zexture:
             Which camera device will be used
         `dataloc` : string path (default = r'modules\assets')
             location where all asset related data and other assets are stored
-        `trainloc` : string path (default = r'modules\assets\staticTrainingData')
+        `trainloc` : string path (default = r'modules\assets\dynamicTrainingData')
             location where all training data and other assets are stored
-        `trainName` : string (default = 'staticData')
+        `trainName` : string (default = 'dynamicData')
             FileName of final training data
         `modelName` : string (deafult = 'RFCModel')
             Exported model name
 
         See Also
         --------
-        `StaticGesture.cameraTest` : Test whether openCV can open your camera properly
-        `StaticGesture.staticTrain` : Train data with your own gestures
-        `StaticGesture.joinTrainingSets` : Combine all training data to one file
-        `StaticGesture.modelRFC` : Apply Random Forest Regression to create model 
-        `StaticGesture.addTrain` : Combine `staticTrain()`, `joinTrainingSets()`, `modelRFC()` into single method
-        `StaticGesture.testImage` : Test a single image frame and return result
-        `StaticGesture.staticTest` : Open Camera and Test the model real-time
+        `DynamicGesture.cameraTest` : Test whether openCV can open your camera properly
+        `DynamicGesture.dynamicTrain` : Train data with your own gestures
+        `DynamicGesture.joinTrainingSets` : Combine all training data to one file
+        `DynamicGesture.modelRFC` : Apply Random Forest Regression to create model 
+        `DynamicGesture.addTrain` : Combine `dynamicTrain()`, `joinTrainingSets()`, `modelRFC()` into single method
+        `DynamicGesture.testImage` : Test a single image frame and return result
+        `DynamicGesture.dynamicTest` : Open Camera and Test the model real-time
         """
         self.dataLoc = dataLoc
         self.trainLoc = trainLoc
@@ -110,12 +110,12 @@ class Zexture:
         countLabel = 0
 
         column_names = []
-        column_names.append("size_ratio")
+        column_names.append("Size_Ratio")
         for j in range(21):
-            column_names.append("dist_"+str(j))
-            column_names.append("angle_"+str(j))
-            column_names.append("distC_"+str(j))
-            column_names.append("angleC_"+str(j))
+            column_names.append(str(j)+"_dist")
+            column_names.append(str(j)+"_angle")
+            column_names.append(str(j)+"_distC")
+            column_names.append(str(j)+"_angleC")
         data = [[0.0 for j in range(85)] for i in range(sampleSize)]
         df = pd.DataFrame(data, columns=column_names)
         prevlmlist = [[0,0,0] for i in range(21)]
@@ -143,16 +143,16 @@ class Zexture:
                 cv2.circle(img, terminal, 3, (255,0,0), cv2.FILLED)
                 cv2.circle(img, center, 5, (0,255,0), cv2.FILLED)
 
-                df["size_ratio"][countLabel] = boxLength / boxHeight
+                df["Size_Ratio"][countLabel] = boxLength / boxHeight
                 for i in range(21):
                     cv2.arrowedLine(img, center, (lmlist[i][1], lmlist[i][2]), (0,0,0), 2)
                     cv2.arrowedLine(img, (prevlmlist[i][1], prevlmlist[i][2]), (lmlist[i][1], lmlist[i][2]), (255,255,255), 2)
                     dist, angle = getVector(center,(lmlist[i][1], lmlist[i][2]))
                     distC, angleC = getVector((prevlmlist[i][1], prevlmlist[i][2]),(lmlist[i][1], lmlist[i][2]))
-                    df["dist_"+str(i)][countLabel] = dist/boxDiagonal
-                    df["angle_"+str(i)][countLabel] = angle
-                    df["distC_"+str(i)][countLabel] = distC/boxDiagonal
-                    df["angleC_"+str(i)][countLabel] = angleC
+                    df[str(i)+"_dist"][countLabel] = dist/boxDiagonal
+                    df[str(i)+"_angle"][countLabel] = angle
+                    df[str(i)+"_distC"][countLabel] = distC/boxDiagonal
+                    df[str(i)+"_angleC"][countLabel] = angleC
                 prevlmlist = lmlist
                 countLabel += 1
 
@@ -173,37 +173,59 @@ class Zexture:
         saveLoc = self.trainLoc+'\\'+targetLabel+'_data.csv'
         df.to_csv(saveLoc)
 
-    def joinTrainingSets(self, selectedHandPoints = [0,4,8,12,16,20]):
+    def joinTrainingSets(self, selectedHandPoints = [0,4], frameLimit = 5):
         """
         Combine all training data to one file
 
         Takes all training data files from `self.dataloc` location
         """
+
         all_files = glob.glob(self.trainLoc + "/*_data.csv")
+        
         jsonData = {}
+        final_df = []
         with open(self.dataLoc + "\\gestures.json", 'r') as f:
             jsonData = json.load(f)
             jsonData["gestures"] = []
-        
-        req_cols = ['Label', 'size_ratio']
-        for i in selectedHandPoints:
-            req_cols.append(str(i) + '_dist')
-            req_cols.append(str(i) + '_angle')
 
-        li = []
+        filter_cols = ['Label','Size_Ratio']
+        for i in selectedHandPoints:
+            filter_cols.append(str(i)+"_dist")
+            filter_cols.append(str(i)+"_angle")
+            filter_cols.append(str(i)+"_distC")
+            filter_cols.append(str(i)+"_angleC")
+        
+        req_cols = ['Label']
+        for i in range(frameLimit):
+            req_cols.append(str(i)+"_Size_Ratio")
+            for j in selectedHandPoints:
+                req_cols.append(str(j)+"_"+str(i)+'_dist')
+                req_cols.append(str(j)+"_"+str(i)+'_angle')
+                req_cols.append(str(j)+"_"+str(i)+'_distC')
+                req_cols.append(str(j)+"_"+str(i)+'_angleC')
+
         for filename in all_files:
             df = pd.read_csv(filename, index_col=None, header=0)
-            df = df[req_cols]
-            jsonData["gestures"].append(df["Label"][0])
-            li.append(df)
+            df = df[filter_cols]
+            label = df['Label'][0]
+            jsonData["gestures"].append(label)
+            df = df.drop('Label', axis=1)
+
+            full_row = [label]
+            for index, row in df.iterrows():
+                full_row = full_row + list(row)
+                if index % frameLimit == frameLimit-1:
+                    final_df.append(full_row)
+                    full_row = [label]
         
         self.gestures = jsonData['gestures']
         with open(self.dataLoc + "\\gestures.json", 'w') as f:
             jsonData["selectedHandPoints"] = selectedHandPoints
             json.dump(jsonData, f)
+        self.gestureCount = len(final_df)
 
-        self.gestureCount = len(li)
-        frame = pd.concat(li, axis=0, ignore_index=True)
+        frame = pd.DataFrame(final_df, columns=req_cols)
+        print(frame)
         saveLoc = self.dataLoc+'\\'+self.trainName+".csv"
         frame.to_csv(saveLoc)
 
@@ -213,7 +235,7 @@ class Zexture:
 
         Exports model by the name of `self.modelName`
         """
-        df = pd.read_csv(self.dataLoc+'\\'+"staticData"+".csv")
+        df = pd.read_csv(self.dataLoc+'\\'+"dynamicData"+".csv")
         df = df.iloc[: , 1:]
         print(df)
 
@@ -236,7 +258,7 @@ class Zexture:
 
     def addTrain(self, targetLabel, sampleSize = 500):
         """
-        Combine `staticTrain()`, `joinTrainingSets()`, `modelRFC()` into single method
+        Combine `dynamicTrain()`, `joinTrainingSets()`, `modelRFC()` into single method
 
         Parameters
         ----------
@@ -247,7 +269,7 @@ class Zexture:
             - More sampleSize means more accuracy but it takes more time to train
             - `Warning`: Using different sampleSize for different training data might cause mismatch and lead to unexpected results
         """
-        self.staticTrain(targetLabel, sampleSize)
+        self.dynamicTrain(targetLabel, sampleSize)
         self.joinTrainingSets()
         self.modelRFC()
 
@@ -297,7 +319,7 @@ class Zexture:
         else:
             return ""
     
-    def staticTest(self, show=True):
+    def dynamicTest(self, show=True):
         """
         Start camera and test the model real-time
 
@@ -340,12 +362,12 @@ class Zexture:
 # remove the modules parent from initial imports to use the below main method 
 
 # def main():
-#     sg = StaticGesture("Flat", 500)
+#     sg = DynamicGesture("Flat", 500)
 #     # sg.cameraTest()
-#     # sg.staticTrain()
+#     # sg.dynamicTrain()
 #     # sg.joinTrainingSets()
 #     # sg.modelRFC()
-#     sg.staticTest()
+#     sg.dynamicTest()
 
 # if __name__=="__main__":
 #     main()

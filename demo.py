@@ -19,11 +19,13 @@ def main():
     # gesture.cameraTest()
 
     # - Use the following method to train data with a target Label
-    # After training, it picture will pause for a few seconds, pls be patient
+    # After training, the picture will pause for a few seconds, pls be patient
     # gesture.addTrain("six", sampleSize=100)
 
     # - Test the trained model in real-time camera
-    gesture.dynamicTrain("Hi", 50)
+    # gesture.dynamicTrain("Stop", 50)
+    gesture.joinTrainingSets()
+    # gesture.modelRFC()
     # gesture.staticTest()
 
     # PRESS ESCAPE KEY IN ORDER TO CLOSE THE CAMERA
