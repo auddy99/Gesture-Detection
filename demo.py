@@ -20,7 +20,7 @@ def main():
 
     # - Use the following method to train data with a target Label
     # After training, it picture will pause for a few seconds, pls be patient
-    # gesture.addTrain("six", sampleSize=100)
+    # gesture.addTrain("Victory")
 
     # - Test the trained model in real-time camera
     gesture.staticTest()

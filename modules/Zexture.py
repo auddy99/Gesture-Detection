@@ -1,4 +1,3 @@
-from matplotlib.pyplot import axis
 import modules.HandTrackingModule as htm
 from modules.GestureMath import *
 
@@ -80,7 +79,7 @@ class Zexture:
         cap = cv2.VideoCapture(self.cam)
         while True:
             success,img = cap.read()
-            print(type(img))
+            # print(type(img))
             if showHand==True:
                 img = self.detector.findhands(img)
             
@@ -110,43 +109,32 @@ class Zexture:
         countLabel = 0
 
         p = dict()
-        p['Label'] = [targetLabel for i in range (sampleSize)]
-        p['size_ratio'] = []
-        for i in range(21):
-            p[str(i)+'_dist'] = []
-            p[str(i)+'_angle'] = []
+        p['index'] = [targetLabel+"_" + str(i) for i in range (sampleSize)]
 
         while countLabel < sampleSize:
             success,img = cap.read()
-            img = self.detector.findhands(img, draw=False)
+            img = self.detector.findhands(img)
             lmlist = self.detector.findPosition(img)
             
             if len(lmlist) != 0:
 
-                x_list = [i[1] for i in lmlist]
-                y_list = [i[2] for i in lmlist]
+                try:
+                    distFromCOM, angleFromCOM = getVectorFromCenter(lmlist)
+                except:
+                    continue
 
-                origin = (min(x_list), min(y_list))
-                terminal = (max(x_list), max(y_list))
-                boxLength = terminal[0] - origin[0]
-                boxHeight = terminal[1] - origin[1]
-                boxDiagonal = sqrt(boxLength*boxLength + boxHeight*boxHeight)
-                center = ((int)(origin[0]+boxLength/2), (int)(origin[1]+boxHeight/2))
-
-                cv2.rectangle(img, origin, terminal, color=(0,0,255), thickness=2)
-                cv2.circle(img, origin, 3, (255,0,0), cv2.FILLED)
-                cv2.circle(img, terminal, 3, (255,0,0), cv2.FILLED)
-                cv2.circle(img, center, 5, (0,255,0), cv2.FILLED)
-
-                p['size_ratio'].append(boxLength / boxHeight)
-
-                for i in range(21):
-                    distFromCenter, angleFromCenter = getVector(center, (lmlist[i][1], lmlist[i][2]))
+                for i in range(0,21):
                     if str(i)+'_dist' in p:
-                        p[str(i)+'_dist'].append(distFromCenter/boxDiagonal)
-                        p[str(i)+'_angle'].append(angleFromCenter)
+                        p[str(i)+'_dist'].append(distFromCOM[i])
+                        p[str(i)+'_angle'].append(angleFromCOM[i])
+                    else:
+                        p[str(i)+'_dist'] = [distFromCOM[i]]
+                        p[str(i)+'_angle'] = [angleFromCOM[i]]
 
-                countLabel = countLabel+1
+                countLabel=countLabel+1
+                
+                #print(lmlist)
+                #print(distfromCOM)
 
             cTime = time.time()
             fps = 1/(cTime-pTime)
@@ -162,10 +150,12 @@ class Zexture:
 
 
         df = pd.DataFrame(p)
+        df.insert(43,"Label", [targetLabel for i in range(sampleSize)])
+
         saveLoc = self.trainLoc+'\\'+targetLabel+'_data.csv'
         df.to_csv(saveLoc)
 
-    def joinTrainingSets(self, selectedHandPoints = [0,4,8,12,16,20]):
+    def joinTrainingSets(self):
         """
         Combine all training data to one file
 
@@ -177,21 +167,14 @@ class Zexture:
             jsonData = json.load(f)
             jsonData["gestures"] = []
         
-        req_cols = ['Label', 'size_ratio']
-        for i in selectedHandPoints:
-            req_cols.append(str(i) + '_dist')
-            req_cols.append(str(i) + '_angle')
-
         li = []
         for filename in all_files:
             df = pd.read_csv(filename, index_col=None, header=0)
-            df = df[req_cols]
             jsonData["gestures"].append(df["Label"][0])
             li.append(df)
         
         self.gestures = jsonData['gestures']
         with open(self.dataLoc + "\\gestures.json", 'w') as f:
-            jsonData["selectedHandPoints"] = selectedHandPoints
             json.dump(jsonData, f)
 
         self.gestureCount = len(li)
@@ -206,22 +189,22 @@ class Zexture:
         Exports model by the name of `self.modelName`
         """
         df = pd.read_csv(self.dataLoc+'\\'+"staticData"+".csv")
-        df = df.iloc[: , 1:]
-        print(df)
+        df = df.iloc[: , 3:]
 
         label_encoder = preprocessing.LabelEncoder()
         df['Label'] = label_encoder.fit_transform(df['Label'])
 
-        y = df['Label'].astype('int')
+        y = df['Label']
+        y = y.astype('int')
         X = df.drop('Label', axis=1)
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=101)
 
         rfc = RandomForestClassifier(n_estimators=600)
         rfc.fit(X_train,y_train)
 
         predictions = rfc.predict(X_test)
         print(classification_report(y_test,predictions))
-        print(y.value_counts())
+
         rfc.fit(X.values,y.values)
         self.model = rfc
         pickle.dump(rfc, open(self.dataLoc + "\\" + self.modelName +'.sav', 'wb'))
@@ -243,7 +226,7 @@ class Zexture:
         self.joinTrainingSets()
         self.modelRFC()
 
-    def testImage(self, img, show, selectedHandPoints):
+    def testImage(self, img, show):
         """
         Test a single image frame and return result
 
@@ -255,33 +238,15 @@ class Zexture:
             Shows the hand skeleton while viewing
         """
         
-        img = self.detector.findhands(img, draw=True)
+        img = self.detector.findhands(img, draw=show)
         lmlist = self.detector.findPosition(img)
 
         if len(lmlist) != 0:
-
-            x_list = [i[1] for i in lmlist]
-            y_list = [i[2] for i in lmlist]
-
-            origin = (min(x_list), min(y_list))
-            terminal = (max(x_list), max(y_list))
-            boxLength = terminal[0] - origin[0]
-            boxHeight = terminal[1] - origin[1]
-            boxDiagonal = sqrt(boxLength*boxLength + boxHeight*boxHeight)
-            center = ((int)(origin[0]+boxLength/2), (int)(origin[1]+boxHeight/2))
-
-            # cv2.rectangle(img, origin, terminal, color=(0,0,255), thickness=2)
-            # cv2.circle(img, origin, 3, (255,0,0), cv2.FILLED)
-            # cv2.circle(img, terminal, 3, (255,0,0), cv2.FILLED)
-            # cv2.circle(img, center, 5, (0,255,0), cv2.FILLED)
-
-            testList = [boxLength / boxHeight]
+            distFromCOM, angleFromCOM = getVectorFromCenter(lmlist)
+            testList = []
             for i in range(21):
-                if(i not in selectedHandPoints):
-                    continue
-                distFromCenter, angleFromCenter = getVector(center, (lmlist[i][1], lmlist[i][2]))
-                testList.append(distFromCenter/boxDiagonal)
-                testList.append(angleFromCenter)
+                testList.append(distFromCOM[i])
+                testList.append(angleFromCOM[i])
             
             answer = self.model.predict([testList])
             result = self.gestures[int(answer)]
@@ -300,13 +265,10 @@ class Zexture:
         """
         pTime,cTime = 0,0
         cap = cv2.VideoCapture(self.cam)        
-
-        with open(self.dataLoc + "\\gestures.json", 'r') as f:
-            jsonData = json.load(f)
         
         while True:
             success,img = cap.read()
-            answer = self.testImage(img, show, jsonData['selectedHandPoints'])
+            answer = self.testImage(img, show)
 
             cTime=time.time()
             fps=1/(cTime-pTime)
